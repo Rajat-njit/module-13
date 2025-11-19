@@ -1,4 +1,4 @@
-# app/core/config.py
+# app/core/config.py dfg
 
 from functools import lru_cache
 from pydantic_settings import BaseSettings
