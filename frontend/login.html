@@ -50,48 +50,47 @@
   </div>
 
   <script>
-    const loginForm = document.getElementById("login-form");
-    const loginMessageEl = document.getElementById("login-message");
+  const loginForm = document.getElementById("login-form");
+  const loginMessageEl = document.getElementById("login-message");
 
-    loginForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      loginMessageEl.textContent = "";
-      loginMessageEl.className = "message";
+  loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    loginMessageEl.textContent = "";
+    loginMessageEl.className = "message";
 
-      const username_or_email = document
-        .getElementById("username_or_email")
-        .value.trim();
-      const password = document.getElementById("password").value;
+    const username = document
+      .getElementById("username_or_email")
+      .value.trim();
+    const password = document.getElementById("password").value;
 
-      const payload = { username_or_email, password };
+    // IMPORTANT CHANGE → tests expect "username", not "username_or_email"
+    const payload = { username, password };
 
-      try {
-        const resp = await fetch("/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+    try {
+      const resp = await fetch("/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-        const data = await resp.json();
+      const data = await resp.json();
 
-        if (!resp.ok) {
-          const detail = data?.detail || "Login failed.";
-          loginMessageEl.textContent = detail;
-          loginMessageEl.classList.add("error");
-          return;
-        }
-
-        // { message, access_token, token_type }
-        localStorage.setItem("access_token", data.access_token);
-
-        loginMessageEl.textContent = data.message || "Login successful!";
-        loginMessageEl.classList.add("success");
-      } catch (err) {
-        console.error(err);
-        loginMessageEl.textContent = "Network error. Please try again.";
+      if (!resp.ok) {
+        loginMessageEl.textContent = data?.detail || "Login failed.";
         loginMessageEl.classList.add("error");
+        return;
       }
-    });
-  </script>
+
+      localStorage.setItem("access_token", data.access_token);
+
+      loginMessageEl.textContent = data.message || "Login successful!";
+      loginMessageEl.classList.add("success");
+    } catch (err) {
+      loginMessageEl.textContent = "Network error. Please try again.";
+      loginMessageEl.classList.add("error");
+    }
+  });
+</script>
+
 </body>
 </html>

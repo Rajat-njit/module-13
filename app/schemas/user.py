@@ -34,12 +34,19 @@ class UserCreate(UserBase):
 # ------------------- LOGIN -------------------
 
 class UserLogin(BaseModel):
-    """
-    Module-13 style login:
-    - Takes username OR email
-    """
-    username_or_email: str = Field(..., min_length=3)
-    password: str = Field(..., min_length=8, max_length=128)
+    username: str | None = None  # Module 12 tests use this
+    username_or_email: str | None = None  # Frontend uses this
+    password: str = Field(..., min_length=8)
+
+    @model_validator(mode="after")
+    def require_username(self):
+        if not self.username and not self.username_or_email:
+            raise ValueError("username or username_or_email is required")
+        return self
+
+    def get_identifier(self):
+        return self.username or self.username_or_email
+
 
 
 # ------------------- RESPONSE -------------------

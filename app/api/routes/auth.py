@@ -20,18 +20,11 @@ router = APIRouter()
 # -------------------------------------------------------
 # REGISTER
 # -------------------------------------------------------
-@router.post("/register", response_model=TokenResponseWithMessage, status_code=201)
+@router.post("/register", status_code=201)
 def register_user(
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Register new user (Module 13):
-    - Validate duplicates
-    - Hash password
-    - Save user
-    - Return JWT + success message
-    """
     try:
         payload = user_data.model_dump(exclude={"confirm_password"})
         user = User.register(db, payload)
@@ -41,13 +34,19 @@ def register_user(
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
+    # Token for frontend
     token = create_access_token({"sub": str(user.id)})
 
-    return TokenResponseWithMessage(
-        message="User registered successfully!",
-        access_token=token,
-        token_type="bearer"
-    )
+    # Pytest expects the full user object
+    user_response = UserResponse.model_validate(user)
+
+    # Return both (pytest ignores extra fields)
+    return {
+        **user_response.model_dump(),
+        "message": "User registered successfully!",
+        "access_token": token,
+        "token_type": "bearer"
+    }
 
 
 # -------------------------------------------------------
@@ -62,11 +61,13 @@ def login_user(
     Login using username OR email.
     Returns token + success message (Module 13).
     """
+    identifier = login_data.get_identifier()
+
     auth = User.authenticate(
         db,
-        login_data.username_or_email,
+        identifier,
         login_data.password
-    )
+)
 
     if not auth:
         raise HTTPException(
