@@ -31,30 +31,43 @@ from app.database import Base
 
 
 # -------------------------------------------------------------
-# UUID compatibility for SQLite (assignment requires SQLite)
+# UUID compatibility for BOTH PostgreSQL & SQLite
 # -------------------------------------------------------------
 class GUID(types.TypeDecorator):
-    """Platform-independent GUID type"""
+    """Platform-independent GUID type.
 
-    impl = types.BLOB
+    - On PostgreSQL -> use native UUID
+    - On SQLite -> store as CHAR(36)
+    """
+
+    impl = types.CHAR(36)
+    cache_ok = True
 
     def load_dialect_impl(self, dialect):
         if dialect.name == "postgresql":
-            return dialect.type_descriptor(PG_UUID(as_uuid=True)) # pragma: no cover
+            # Use native UUID column
+            return dialect.type_descriptor(PG_UUID(as_uuid=True))
         else:
-            return dialect.type_descriptor(types.BLOB())
+            # Store UUID as a string for SQLite
+            return dialect.type_descriptor(types.CHAR(36))
 
     def process_bind_param(self, value, dialect):
         if value is None:
-            return value    # pragma: no cover
-        if not isinstance(value, uuid.UUID):
-            value = uuid.UUID(str(value))
-        return value.bytes
+            return None
+
+        if isinstance(value, uuid.UUID):
+            # Always store as string
+            return str(value)
+
+        # Convert from string → UUID → string (normalized)
+        return str(uuid.UUID(str(value)))
 
     def process_result_value(self, value, dialect):
         if value is None:
-            return value    # pragma: no cover
-        return uuid.UUID(bytes=value)
+            return None
+
+        # Convert database string → UUID object
+        return uuid.UUID(str(value))
 
 
 # -------------------------------------------------------------

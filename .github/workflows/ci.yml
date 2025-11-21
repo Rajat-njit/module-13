@@ -8,9 +8,9 @@ on:
 
 jobs:
 
-  # --------------------------
-  # 1. TEST JOB
-  # --------------------------
+  # -------------------------------------------------
+  # 1. TEST JOB (Python Tests + Playwright E2E Tests)
+  # -------------------------------------------------
   test:
     runs-on: ubuntu-latest
 
@@ -30,29 +30,59 @@ jobs:
           --health-retries=5
 
     steps:
+      # Checkout repository
       - uses: actions/checkout@v4
 
+      # Python setup
       - uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      # Install Python dependencies
+      - name: Install Python dependencies
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fastapi_db_test
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
+      # Run Python tests
+      - name: Run pytest
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fastapi_db_test
         run: |
           pytest --disable-warnings --maxfail=1
 
+      # --------------------------------------------
+      # Playwright Setup
+      # --------------------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-  # --------------------------
-  # 2. SECURITY JOB
-  # --------------------------
+      - name: Install Playwright dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      # Start FastAPI server for E2E tests
+      - name: Start FastAPI server
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fastapi_db_test
+        run: |
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 5
+
+      # Run Playwright Tests
+      - name: Run Playwright E2E tests
+        run: |
+          npx playwright test --reporter=line
+
+
+  # -------------------------------------------------
+  # 2. SECURITY JOB (Trivy Scan)
+  # -------------------------------------------------
   security:
     needs: test
     runs-on: ubuntu-latest
@@ -60,9 +90,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build image
+      - name: Build image for security scan
         run: docker build -t fastapi-calculator:test .
 
+      # Trivy vulnerability scan
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
@@ -72,9 +103,10 @@ jobs:
           ignore-unfixed: true
           severity: "CRITICAL,HIGH"
 
-  # --------------------------
-  # 3. DEPLOY JOB
-  # --------------------------
+
+  # -------------------------------------------------
+  # 3. DEPLOY JOB (Push to Docker Hub)
+  # -------------------------------------------------
   deploy:
     needs: security
     if: github.ref == 'refs/heads/main'
@@ -85,13 +117,15 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      - uses: docker/login-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-
-      - uses: docker/build-push-action@v5
+      # Build & Push Multi-Arch Image
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v5
         with:
           push: true
           tags: |

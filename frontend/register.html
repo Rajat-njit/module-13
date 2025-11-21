@@ -1,0 +1,179 @@
+<!-- frontend/register.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Register | FastAPI Calculator</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="page-container">
+    <div class="card">
+      <h1>Create Account</h1>
+      <p class="subtitle">
+        Register a new user to access the calculator API.
+      </p>
+
+      <form id="register-form">
+        <div class="form-group">
+          <label for="first_name">First name</label>
+          <input
+            id="first_name"
+            name="first_name"
+            type="text"
+            required
+            minlength="1"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="last_name">Last name</label>
+          <input
+            id="last_name"
+            name="last_name"
+            type="text"
+            required
+            minlength="1"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            required
+            minlength="3"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password (min 8 chars)</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="confirm_password">Confirm password</label>
+          <input
+            id="confirm_password"
+            name="confirm_password"
+            type="password"
+            required
+          />
+        </div>
+
+        <button type="submit" class="primary-btn">Register</button>
+      </form>
+
+      <p class="small-text">
+        Already have an account?
+        <a href="/static/login.html">Login here</a>
+      </p>
+
+      <div id="register-message" class="message"></div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("register-form");
+    const messageEl = document.getElementById("register-message");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      messageEl.textContent = "";
+      messageEl.className = "message";
+
+      const first_name = document.getElementById("first_name").value.trim();
+      const last_name = document.getElementById("last_name").value.trim();
+      const username = document.getElementById("username").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const confirm_password = document.getElementById("confirm_password").value;
+
+      // ---------------------
+      // FRONT-END VALIDATIONS
+      // ---------------------
+
+      if (password.length < 8) {
+        messageEl.textContent = "Password must be at least 8 characters.";
+        messageEl.classList.add("error");
+        return;
+      }
+
+      if (password !== confirm_password) {
+        messageEl.textContent = "Passwords do not match.";
+        messageEl.classList.add("error");
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        messageEl.textContent = "Please enter a valid email address.";
+        messageEl.classList.add("error");
+        return;
+      }
+
+      // ---------------------
+      // PAYLOAD
+      // ---------------------
+      const payload = {
+        first_name,
+        last_name,
+        username,
+        email,
+        password,
+        confirm_password,
+      };
+
+      // ---------------------
+      // REGISTER REQUEST
+      // ---------------------
+      try {
+        const resp = await fetch("/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          const detail = data?.detail || "Registration failed.";
+          messageEl.textContent = detail;
+          messageEl.classList.add("error");
+          return;
+        }
+
+        // Response includes: { message, access_token }
+        if (data.access_token) {
+          localStorage.setItem("access_token", data.access_token);
+        }
+
+        messageEl.textContent = data.message || "Registration successful!";
+        messageEl.classList.add("success");
+
+      } catch (err) {
+        console.error(err);
+        messageEl.textContent = "Network error. Please try again.";
+        messageEl.classList.add("error");
+      }
+    });
+  </script>
+</body>
+</html>

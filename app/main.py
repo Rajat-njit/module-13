@@ -2,9 +2,15 @@
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from fastapi.openapi.utils import get_openapi
 from fastapi.security import HTTPBearer
 from app.database import Base, engine
+
+
 
 # Routers
 from app.api.routes.auth import router as auth_router
@@ -40,6 +46,9 @@ app = FastAPI(
     lifespan=lifespan,
     swagger_ui_parameters={"persistAuthorization": True}  # Keep token on reload
 )
+
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
 
 
 # ------------------------------------------------------------------------------
