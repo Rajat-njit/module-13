@@ -16,11 +16,18 @@ COPY requirements.txt .
 # 5. Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 6. Copy FastAPI application
+# 6. Copy FastAPI app
 COPY . .
 
-# 7. Expose FastAPI port
+# 7. Copy frontend static files (Module-13 requirement)
+COPY frontend ./frontend
+
+# 8. Security best practice: non-root user
+RUN useradd -m appuser
+USER appuser
+
+# 9. Expose FastAPI port
 EXPOSE 8000
 
-# 8. Start server
+# 10. Start server
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

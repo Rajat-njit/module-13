@@ -28,8 +28,11 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/fastapi_db
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
+
+    # UNCOMMENT THIS ONLY FOR LOCAL DEV, NOT IN CI/CD
+    # volumes:
+    #   - .:/app
+
     restart: always
 
 volumes:
